@@ -61,8 +61,6 @@ _robotNavStates robotNavState;
 int main()
 {
 
-    cout << "Hello World!" << endl;
-
     iRobot  robot;
  
  // this section of code is not required for this project
@@ -91,7 +89,9 @@ int main()
     raw();
     cbreak();
     noecho();
-#endif     
+#endif    
+ 
+    std::cout << "Hello World!" std::<< endl;
     
     while (dir!='e')
     {
@@ -99,139 +99,29 @@ int main()
         switch(dir)
         {
         case 'g':
-
-            while (1)
+            robot.registerCallback({SENSOR::bumpcleft, SENSOR::bumpcright}, [](std::shared_ptr<pSensor> data)
             {
-                switch(robotNavState)
+                int32_t din;
+                if (data->getData(din)!=ERROR::NONE)
                 {
-                case R_INIT:
-                    initSensorsForNav(robot);
-                    robotNavState = R_DRIVE;
-                    robot.play(1);  // feed back
-                    break;
-
-                case R_DRIVE:
-                    robot.dStraight(DriveSpeed); // medium speed
-                    disTraveled = 0;
-                    robotNavState = R_FIND_WALL;
-                    break;
-
-                case R_TURN:
-                    MyAngle = rad2Deg( (((MyRightEncoder*Pi*72)/508.8)-((MyLeftEncoder*Pi*72)/508.8))/235 );// in radians
-                    if (MyAngle >= AmountToTurn)
-                    {
-                        robot.dStraight(DriveSpeed);
-                        robotNavState = R_FOLLOW_WALL_RIGHT;
-                    }
-
-                    break;
-
-                case R_FIND_WALL:
-                    if ((Mybumpfright > HighBumpThres ) || (Mybumpcright > HighBumpThres ) || (Mybumpright > HighBumpThres ) ||
-                        (Mybumpfleft > HighBumpThres )  || (Mybumpcleft > HighBumpThres)   || (Mybumpleft > HighBumpThres)    )
-                    {
-                        robot.dCClockwise(TurnSpeed); // turn left
-                        StartTurnLeft = MyLeftEncoder;
-                        StartTurnRight = MyRightEncoder;
-                        AmountToTurn = 90;
-                        robotNavState = R_TURN;
-                    }
-                    break;
-
-                case R_FIND_MIDDLE:
-
-                    if ((MyRightEncoder - StartTravel) >= 2742 ) // about 4 feet
-                    {
-                        robot.dStraight(0);
-                        robot.dClockwise(TurnSpeed);
-                        usleep(1025*1000);
-                        robotNavState = R_FIND_WALL;
-                        robot.dStraight(DriveSpeed);
-                    }
-                    else
-                    {
-                        if ((Mybumpfright > HighBumpThres ) || (Mybumpcright > HighBumpThres ) || (Mybumpright > HighBumpThres ) ||
-                            (Mybumpfleft > HighBumpThres )  || (Mybumpcleft > HighBumpThres)   || (Mybumpleft > HighBumpThres)    )
-                        {
-                            robot.dClockwise(TurnSpeed); // turn left
-                            usleep(2750*1000); // turn 180
-                            StartTravel = MyRightEncoder;
-                            robotNavState = R_FIND_MIDDLE;
-                            robot.dStraight(DriveSpeed);
-                        }
-                    }
-
-                    break;
-
-
-                case R_FOLLOW_WALL_RIGHT:
-                    if ((Mybumpcright > HighBumpThres) && (Mybumpcleft > HighBumpThres))
-                    {  // turn 90 degrees this is a corner
-                        robot.dCClockwise(TurnSpeed);// turn left
-                        sleep(1.25); // 1.5 sec
-                    }
-                    else if ((Mybumpright > LowBumpThres) && (Mybumpright < HighBumpThres))
-                    {
-                        robot.dStraight(DriveSpeed);
-
-                    }
-                    else if ((Mybumpright <= NoWall))
-                    {
-                        robot.dStraight(0); // stop
-                        sleep(4);
-                        robotNavState = R_EXIT_ROOM;
-                    }
-                    break;
-
-                case R_FOLLOW_WALL_LEFT:
-                    if ((Mybumpcright > HighBumpThres) && (Mybumpcleft > HighBumpThres))
-                    {  // turn 90 degrees this is a corner
-                        robot.dClockwise(TurnSpeed);// turn left
-                        sleep(1.25); // 500msec
-                    }
-                    else if ((Mybumpleft > LowBumpThres) && (Mybumpleft < HighBumpThres))
-                    {
-                        robot.dStraight(DriveSpeed);
-
-                    }
-                    else if ((Mybumpleft <= NoWall))
-                    {
-                        robot.dStraight(0); // stop
-                        sleep(4);
-                        robotNavState = R_EXIT_ROOM;
-                    }
-
-                    break;
-
-                case R_EXIT_ROOM:
-                    robot.dStraight(DriveSpeed);
-                    sleep(4); // move up just a bit to clear the wall
-                    robot.dClockwise(DriveSpeed);
-                    sleep(1.25);
-                    robot.dStraight(DriveSpeed);
-                    sleep(4);
-                    robotNavState = R_STOP;
-                    robot.play(1);
-                    break;
-
-                case R_STOP:
-                    robot.dStraight(0); // stop
-                    break;
-
-                case R_ANGLE:
-                    // angle = ((rightEncoder*Pi*72/508.8)-(leftEncoder*Pi*72/508.0))/235
-
-
-
-                case R_DISTANCE:
-                    // dist = encoder_reading * (Pi*72/508.8)
-
-
-                default:
-                    break;
-
+                    std::cout << "Data not valid" <<std::endl;
                 }
-            }
+
+                if (data->getType() == SENSOR::bumpcleft)
+                {
+                    Mybumpcleft = din;
+                    std::cout << "bump c left:" << din <<std::endl;
+                    std::cout << "\n\r";
+                }
+
+                if (data->getType() == SENSOR::bumpcright)
+                {
+                    Mybumpcright = din;
+                    std::cout << "bump c right:" << din <<std::endl;
+                    std::cout << "\n\r";
+                }
+
+            });
 
         break; // 'g'
 
@@ -240,7 +130,7 @@ int main()
             break;
 
         case '2':
-            robot.sstream({SENSOR::bumpfleft,SENSOR::bumpfright});
+            robot.sstream({SENSOR::bumpcleft,SENSOR::bumpcright});
             break;
 #if 1
         case '3':
@@ -319,117 +209,5 @@ int main()
     }
 
 }
-
-// start streaming a bunch of sensors to navigate the robot out of the room
-void initSensorsForNav(iRobot &_robot)
-{
-    _robot.registerCallback({SENSOR::rightencoder}, [](std::shared_ptr<pSensor> data)
-    {
-        int32_t din;
-        if (data->getData(din)!=ERROR::NONE)
-        {
-            std::cout << "Data not valid" <<std::endl;
-        }
-        MyRightEncoder = din;
-        std::cout << "right encoder:" << din <<std::endl;
-        std::cout << "\n\r";
-    });
-
-    _robot.registerCallback({SENSOR::bumpfleft}, [](std::shared_ptr<pSensor> data)
-    {
-        int32_t din;
-        if (data->getData(din)!=ERROR::NONE)
-        {
-            std::cout << "Data not valid" <<std::endl;
-        }
-        Mybumpfleft = din;
-        std::cout << "bump front left:" << din <<std::endl;
-        std::cout << "\n\r";
-    });
-
-    _robot.registerCallback({SENSOR::bumpfright}, [](std::shared_ptr<pSensor> data)
-    {
-        int32_t din;
-        if (data->getData(din)!=ERROR::NONE)
-        {
-            std::cout << "Data not valid" <<std::endl;
-        }
-        Mybumpfright = din;
-        std::cout << "bump front right:" << din <<std::endl;
-        std::cout << "\n\r";
-    });
-
-    _robot.registerCallback({SENSOR::bumpcleft}, [](std::shared_ptr<pSensor> data)
-    {
-        int32_t din;
-        if (data->getData(din)!=ERROR::NONE)
-        {
-            std::cout << "Data not valid" <<std::endl;
-        }
-        Mybumpcleft = din;
-        std::cout << "bump center left:" << din <<std::endl;
-        std::cout << "\n\r";
-    });
-    _robot.registerCallback({SENSOR::bumpcright}, [](std::shared_ptr<pSensor> data)
-    {
-        int32_t din;
-        if (data->getData(din)!=ERROR::NONE)
-        {
-            std::cout << "Data not valid" <<std::endl;
-        }
-        Mybumpcright = din;
-        std::cout << "bump center right:" << din <<std::endl;
-        std::cout << "\n\r";
-    });
-
-    _robot.registerCallback({SENSOR::bumpleft}, [](std::shared_ptr<pSensor> data)
-    {
-        int32_t din;
-        if (data->getData(din)!=ERROR::NONE)
-        {
-            std::cout << "Data not valid" <<std::endl;
-        }
-        Mybumpleft = din;
-        std::cout << "bump left:" << din <<std::endl;
-        std::cout << "\n\r";
-    });
-
-    _robot.registerCallback({SENSOR::bumpright}, [](std::shared_ptr<pSensor> data)
-    {
-        int32_t din;
-        if (data->getData(din)!=ERROR::NONE)
-        {
-            std::cout << "Data not valid" <<std::endl;
-        }
-        Mybumpright = din;
-        std::cout << "bump right:" << din <<std::endl;
-        std::cout << "\n\r";
-    });
-
-    // needed to start the call back function. starts a read tread
-    _robot.sensorStart();
-    // start streaming the registered sensors
-    _robot.sstream({SENSOR::rightencoder, SENSOR::bumpfleft,SENSOR::bumpfright,SENSOR::bumpcleft, SENSOR::bumpcright, SENSOR::bumpleft, SENSOR::bumpright});
-
-
-    // setup to play a song
-    using namespace psong;
-    uint8_t* notes = new uint8_t[5]
-    {60,69,72,69,72};
-    uint8_t* len   = new uint8_t[5]
-    {8,8,16,8,16};
-    uint8_t* scaleIn = new uint8_t[15]
-    {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-    for (int i=0;i!=5;i++){
-        len[i] =len[i];
-    }
-    pSong song(1);
-    song.setSong(notes,len,scaleIn,5);
-    _robot.song(song);
-}
-
-
-
 
 
