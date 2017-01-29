@@ -76,26 +76,57 @@ int main()
     }
 #endif
 
-    robot.start("/dev/ttyUSB0"); // open the serial com port on the RPi      
-    robot.modesafe(); // place iRobot inot safe mode 
+    robot.start("/dev/ttyUSB0"); // open the serial com port on the RPi
+//    robot.reset();
+    robot.modesafe(); // place iRobot inot safe mode
 
-    int dir = '!';
+    char dir = '!';
 
-// I am not sure what this section code does so let comment out for now     
-// I believe it uses the curse.h library 
-#if 1     
+// I am not sure what this section code does so let comment out for now
+// I believe it uses the curse.h library
+#if 0
     initscr();
     timeout(-1);
     raw();
     cbreak();
     noecho();
-#endif    
- 
-    std::cout << "Hello World!" std::<< endl;
+    refresh();
+#endif
+
+
+    std::cout << "Hello World! \n\r" << std::endl;
+    robot.sensorStart();
+   robot.registerCallback({SENSOR::bumpcleft }, [](std::shared_ptr<pSensor> data)
+   {
+                int32_t din;
+                std::cout << "registerd call back \n\r" << std::endl;
+                if (data->getData(din)!=ERROR::NONE)
+                {
+                    std::cout << "Data not valid" <<std::endl;
+                }
+
+//                if (data->getType() == SENSOR::bumpcleft)
+                {
+                    Mybumpcleft = din;
+                    std::cout << "bump c left:" << din <<std::endl;
+                    std::cout << "\n\r";
+
+                }
+
+//                if (data->getType() == SENSOR::bumpcright)
+//                {
+//                    Mybumpcright = din;
+//                    std::cout << "bump c right:" << din <<std::endl;
+//                    std::cout << "\n\r";
+//                }
+
+   });
+
+    robot.sstream({SENSOR::bumpcleft});
     
     while (dir!='e')
     {
-        dir = getch();
+        std::cin >> dir;
         switch(dir)
         {
         case 'g':
@@ -112,6 +143,7 @@ int main()
                     Mybumpcleft = din;
                     std::cout << "bump c left:" << din <<std::endl;
                     std::cout << "\n\r";
+
                 }
 
                 if (data->getType() == SENSOR::bumpcright)
@@ -207,7 +239,7 @@ int main()
         }
 
     }
-
+    robot.reset();
 }
 
 
