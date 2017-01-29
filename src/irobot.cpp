@@ -197,12 +197,13 @@ error iRobot::squerylist(std::initializer_list<uint8_t> list)
 
 error iRobot::sstream(std::initializer_list<uint8_t> list)
 {
+    
     return writeData(pStream(list));
 }
 
 error iRobot::spause()
 {
-    return writeData(pStrCtl(true));
+    return writeData(pStrCtl(0));
 }
 
 error iRobot::sresume()
@@ -230,7 +231,7 @@ error iRobot::sensorStart()
 
             auto result = callbacks.find(pktIn->getType());
             if (result==callbacks.end()){
-                std::cout<<"No callback registered for packet type" << pktIn->getType()<<std::endl;
+            //    std::cout<<"No callback registered for packet type" << pktIn->getType()<<std::endl;
             }
             else {
                 result->second(pktIn);
@@ -247,6 +248,7 @@ error iRobot::sensorStart()
 
 void iRobot::registerCallback(std::initializer_list<byte> sensors, std::function<void (std::shared_ptr<pSensor>)> function)
 {
+    //std::cout << "registered callbacks \n\r" << std::endl;
     for (byte sensor:sensors){
         auto ptr = callbacks.find(sensor);
         if (ptr!=callbacks.end()){
@@ -265,41 +267,58 @@ error iRobot::writeData(const rData &data)
         uint32_t length = 1+data.dataLen;
         write(serialIo,&length,sizeof(uint32_t));
     }
+
     if (write(serialIo,(void*)&data.opcode,1)<=0){
         return ERROR::NOTREADY;
     }
+    byte in[data.dataLen];
     if (data.dataLen>0){
-        byte in[data.dataLen];
         data.serializeData(in);
         if (write(serialIo,in,data.dataLen)<=0){
             return ERROR::NOTREADY;
         }
     }
+    // debug write date
+    std::cout << "writeData : " ;
+    std::cout << std::hex << (int)data.opcode << ", " ;
+    std::cout << std::hex << (int)data.dataLen << ", " ;
+ 
+    for ( byte i = 0 ; i < data.dataLen; i++)
+    {// allows to print extra 
+        std::cout << std::hex << (int)in[i] << ", " ;
+    }
+    std::cout << "\n\r" << std::endl;
+
     return ERROR::NONE;
 }
 
 std::shared_ptr<pSensor> iRobot::readData()
 {
     byte type;
-    //std::cout << "Waiting for data" << std::endl;
+   // std::cout << "Waiting for data" << std::endl;
     if (readStable(&type,1)!=ERROR::NONE){
         std::cout << std::strerror(errno) <<std::endl;
         std::cout << "Receive disconnected"<<std::endl;
         return std::shared_ptr<pSensor>();
     }
 
+    std::cout << std::hex << "type = "  << (int)type << "\n\r" << std::endl;
+
+
     //create the packet...
     auto pkt = pSensor::getSensorPacketManaged(type);
     if (pkt == 0){
-        std::cout << "No implemented packet, out of sync..." << type<<std::endl;
+        //std::cout << "No implemented packet, out of sync..." << type<< "\n\r" << std::endl;
         return std::shared_ptr<pSensor>();
     }
 
     int length = pkt->getLength();
     if (length == -1){
         //return the packet... it deals with itself...
+        std::cout << "synced packet" << "\n\r" ;
         return pkt;
     }
+// WTF : right now, I am not sure what this does ??
     byte data[length];
     if (readStable(data,length)==ERROR::NONE){
         if (pkt->deserialise(type,data)!=ERROR::NONE){
@@ -313,6 +332,9 @@ std::shared_ptr<pSensor> iRobot::readData()
 error iRobot::readStable(byte *data, int length)
 {
     int total= 0;
+    //std::cout << "read stable \n\r " << std::endl;
+    //std::cout << "total= " << total << "\r\n" << std::endl;
+
     while(total!=length){
         int len = read(serialIo,&data[total],1);
         if (len <0){
