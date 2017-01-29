@@ -117,6 +117,7 @@ pMasterPkt::pMasterPkt():pSensor(SENSOR::masterpkt,-1,true){
 error pMasterPkt::streamToMe(iRobot *robot)
 {
     byte total;
+    // get the length byte or the next available byte. LOL
     if (robot->readStable(&total,1)!=ERROR::NONE){
         return ERROR::BADDATA;
     }
@@ -128,8 +129,9 @@ error pMasterPkt::streamToMe(iRobot *robot)
             std::cout << "Error in stream..."<<std::endl;
             return ERROR::BADDATA;
         }
-        total -= pktIn->getLength();
-        total -=1;
+        // packet = | header | length | Pack id 1 | pack data | pack id 2 | pack data | checksum 
+        total -= pktIn->getLength(); // t = t - packet length;  
+        total -=1; // subtract the checksum ?
         auto result = robot->callbacks.find(pktIn->getType());
         if (result==robot->callbacks.end()){
             std::cout<<"No callback registered for packet type" << pktIn->getType()<<std::endl;

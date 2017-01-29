@@ -264,9 +264,12 @@ private:
     int serialIo;
     error writeData(const rData &data);
     std::shared_ptr<pSensor> readData();
+    std::shared_ptr<pSensor> readHeader();
+    // new routine to sync header id hopefully
     error readStable(byte* data,int length);
-    error disconnect();
+    error syncWithHeaderID(byte* data,int length);
 
+    error disconnect();
     std::map<byte,std::function <void(std::shared_ptr<pSensor>)>> callbacks;
     std::thread readThread;
 };
