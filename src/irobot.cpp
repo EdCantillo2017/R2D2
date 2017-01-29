@@ -218,7 +218,7 @@ error iRobot::sensorStart()
         std::shared_ptr<pSensor> pktIn;
 
         while (true){
-            pktIn = readData();
+            pktIn = readHeader();
             if (!pktIn){
                 continue;
             }
@@ -257,9 +257,6 @@ void iRobot::registerCallback(std::initializer_list<byte> sensors, std::function
         callbacks.insert({{sensor,function}});
     }
 }
-
-
-
 
 error iRobot::writeData(const rData &data)
 {
@@ -347,6 +344,58 @@ error iRobot::readStable(byte *data, int length)
     return ERROR::NONE;
 }
 
+#define _headerId    0x13
+// this routine will block until it finds a header byte 
+error iRobot::syncWithHeaderID(byte *data, int length)
+{
+    int total= 0;
+    byte chRead = 0;
+    while(chRead != _headerId ){
+        int len = read(serialIo,&data[total],1);
+        if (len < 0){ // apparently this is bad so lets leave this routine 
+            return ERROR::BADDATA;
+        }
+        else {
+            chRead = data[total]; // test the character that was received 
+        }
+    }
+    return ERROR::NONE;
+}
+
+// routine to get the header byte and the 
+std::shared_ptr<pSensor> iRobot::readHeader()
+{
+    byte type;
+    //std::cout << "Waiting for data" << std::endl;
+    if (syncWithHeaderID(&type,1)!=ERROR::NONE){
+        std::cout << std::strerror(errno) <<std::endl;
+        std::cout << "Receive disconnected"<<std::endl;
+        return std::shared_ptr<pSensor>();
+    }
+
+    //create the packet...
+    auto pkt = pSensor::getSensorPacketManaged(type);
+    if (pkt == 0){
+        std::cout << "No implemented packet, out of sync..." << type<<std::endl;
+        return std::shared_ptr<pSensor>();
+    }
+
+    int length = pkt->getLength();
+    if (length == -1){
+        //return the packet... it deals with itself...
+        return pkt;
+    }
+
+    // this section should never get here but leaving this code just in case that it does
+    byte data[length];
+    if (readStable(data,length)==ERROR::NONE){
+        if (pkt->deserialise(type,data)!=ERROR::NONE){
+            return std::shared_ptr<pSensor>();
+        }
+        return pkt;
+    }
+    return std::shared_ptr<pSensor>();
+}
 
 error iRobot::disconnect()
 {
