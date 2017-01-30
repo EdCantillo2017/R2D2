@@ -110,7 +110,7 @@ pSensor *pSensor::getSensor(int type)
     }
 }
 
-pMasterPkt::pMasterPkt():pSensor(SENSOR::masterpkt,-1,true){
+pMasterPkt::pMasterPkt():pSensor(SENSOR::masterpkt,(int)-1,true){
 
 }
 
@@ -121,7 +121,7 @@ error pMasterPkt::streamToMe(iRobot *robot)
     if (robot->readStable(&total,1)!=ERROR::NONE){
         return ERROR::BADDATA;
     }
-
+    std::cout<< std::hex << "stream to Me total = " << (int)total << "\n\r";
     while (total>0) {
 
         auto pktIn = robot->readData();
