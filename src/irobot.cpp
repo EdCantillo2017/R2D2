@@ -223,7 +223,7 @@ error iRobot::sensorStart()
                 continue;
             }
 
-            if (pktIn->getLength()==-1){
+            if (pktIn->getLength()==0xFF){
                 //special packet in packet...
                 pktIn->streamToMe(this);
                 continue;
@@ -373,22 +373,27 @@ std::shared_ptr<pSensor> iRobot::readHeader()
         return std::shared_ptr<pSensor>();
     }
 
+    std::cout << std::hex << "HeaderId = "  << (int)type << "\n\r" << std::endl;
+
     //create the packet...
-    auto pkt = pSensor::getSensorPacketManaged(type);
+    auto pkt = pSensor::getSensorPacketManaged((int)type);
     if (pkt == 0){
         std::cout << "No implemented packet, out of sync..." << type<<std::endl;
         return std::shared_ptr<pSensor>();
     }
 
     int length = pkt->getLength();
-    if (length == -1){
+    std::cout << std::hex << "length = " << (int)length << std::endl;
+    if (length == 0xFF){
         //return the packet... it deals with itself...
+        std::cout << "return pkt \r\n" ;
         return pkt;
     }
 
     // this section should never get here but leaving this code just in case that it does
     byte data[length];
     if (readStable(data,length)==ERROR::NONE){
+    std::cout << "readStable ??? \r\n";
         if (pkt->deserialise(type,data)!=ERROR::NONE){
             return std::shared_ptr<pSensor>();
         }
