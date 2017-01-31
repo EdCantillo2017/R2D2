@@ -23,7 +23,7 @@ int StartTravel;
 int StartTurnLeft;
 int StartTurnRight;
 int AmountToTurn;
-
+int counter = 0;
 
 #define DriveSpeed      150
 #define TurnSpeed       150
@@ -51,6 +51,7 @@ typedef enum
     R_EXIT_ROOM,
     R_ANGLE,
     R_DISTANCE,
+    R_TRAVEL,
     R_STOP
 } _robotNavStates;
 
@@ -96,66 +97,105 @@ int main()
 
     std::cout << "Hello World! \n\r" << std::endl;
     robot.sensorStart();
-   robot.registerCallback({SENSOR::bumpcleft }, [](std::shared_ptr<pSensor> data)
-   {
-                int32_t din;
-                std::cout << "registerd call back \n\r" << std::endl;
-                if (data->getData(din)!=ERROR::NONE)
-                {
-                    std::cout << "Data not valid" <<std::endl;
-                }
+    robot.registerCallback({SENSOR::rightencoder, SENSOR::leftencoder, SENSOR::bumpcleft, SENSOR::bumpcright}, [](std::shared_ptr<pSensor> data)
+    {
+        int32_t din;
+        //std::cout << "registerd call back \n\r" << std::endl;
+        if (data->getData(din)!=ERROR::NONE)
+        {
+            std::cout << "Data not valid" <<std::endl;
+        }
 
-//                if (data->getType() == SENSOR::bumpcleft)
-                {
-                    Mybumpcleft = din;
-                    std::cout << "bump c left:" << din <<std::endl;
-                    std::cout << "\n\r";
+        if (data->getType() == SENSOR::rightencoder)
+        {
+            MyRightEncoder = din;
+            //std::cout << "bump c left:" << din <<std::endl;
+            //std::cout << "\n\r";
+        }
 
-                }
+        if (data->getType() == SENSOR::leftencoder)
+        {
+            MyLeftEncoder = din;
+            //std::cout << "bump c left:" << din <<std::endl;
+            //std::cout << "\n\r";
+        }
 
-//                if (data->getType() == SENSOR::bumpcright)
-//                {
-//                    Mybumpcright = din;
-//                    std::cout << "bump c right:" << din <<std::endl;
-//                    std::cout << "\n\r";
-//                }
+        if (data->getType() == SENSOR::bumpcleft)
+        {
+            Mybumpcleft = din;
+            //std::cout << "bump c left:" << din <<std::endl;
+            //std::cout << "\n\r";
+        }
 
-   });
+        if (data->getType() == SENSOR::bumpcright)
+        {
+            Mybumpcright = din;
+            //std::cout << "bump c right:" << din <<std::endl;
+            //std::cout << "\n\r";
+        }
+    });
 
-    robot.sstream({SENSOR::bumpcleft});
-    
+    robot.sstream({SENSOR::rightencoder, SENSOR::leftencoder, SENSOR::bumpcleft, SENSOR::bumpcright} );
+    robotNavState = R_INIT;
+
     while (dir!='e')
     {
         std::cin >> dir;
         switch(dir)
         {
         case 'g':
-            robot.registerCallback({SENSOR::bumpcleft, SENSOR::bumpcright}, [](std::shared_ptr<pSensor> data)
+
+            while (1)
             {
-                int32_t din;
-                if (data->getData(din)!=ERROR::NONE)
+                switch(robotNavState)
                 {
-                    std::cout << "Data not valid" <<std::endl;
+                case R_INIT:
+
+                    //initSensorsForNav(robot);
+                    robotNavState = R_DRIVE;
+                    robot.play(1);  // feed back
+                    break;
+
+                case R_DRIVE:
+                    robot.dStraight(DriveSpeed); // medium speed
+                    disTraveled = 0;
+                    StartTravel = MyRightEncoder;
+                    robotNavState = R_TRAVEL;
+                    break;
+
+                case R_TRAVEL:
+                    // travel for about 4 feet
+                    if ((MyRightEncoder - StartTravel) >= 2742 ) // about 4 feet
+                    {
+                        robot.dStraight(0);
+                        // should add a wait here ??
+                        robot.dCClockwise(TurnSpeed);
+                        robotNavState = R_TURN;
+                        AmountToTurn = 180; // ABOUT 180 degrees
+                        MyAngle = 0;
+                    }
+                    break;
+
+                case R_TURN:
+                    MyAngle = rad2Deg( (((MyRightEncoder*(int)Pi*(int)72)/(int)508.8)-((MyLeftEncoder*(int)Pi*(int)72)/(int)508.8))/(int)235 );// in radians
+                    if (counter++ % 50 )
+                    {
+                        std::cout<<"myangle= " <<(int) MyAngle << "\r\n";
+                    }
+                    
+                    if (MyAngle >= AmountToTurn)
+                    {
+                        robot.dStraight(0);
+                        robotNavState = R_DRIVE;
+                    }
+                    break;
+
+                default:
+
+                    break;
                 }
-
-                if (data->getType() == SENSOR::bumpcleft)
-                {
-                    Mybumpcleft = din;
-                    std::cout << "bump c left:" << din <<std::endl;
-                    std::cout << "\n\r";
-
-                }
-
-                if (data->getType() == SENSOR::bumpcright)
-                {
-                    Mybumpcright = din;
-                    std::cout << "bump c right:" << din <<std::endl;
-                    std::cout << "\n\r";
-                }
-
-            });
-
-        break; // 'g'
+            } // while 1
+        break;
 
         case '1':
             robot.spause();

@@ -335,16 +335,17 @@ protected:
 };
 
 class pStrCtl:public rData{
-    bool isPause;
+    bool PauseStream;
 
 public:
     pStrCtl(bool isPause):rData(OPCODE::spause,1){
-        this->isPause = isPause;
+        this->PauseStream = isPause;
     }
 
 protected:
     error serializeData(byte* data){
-        data[0] = isPause?0:1;
+        //data[0] = isPause?0:1;
+        data[0] = PauseStream;
         return ERROR::NONE;
     }
 
